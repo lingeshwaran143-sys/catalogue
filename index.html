@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Product Catalogue — Row-based shades</title>
+
+<!-- Local Bootstrap & XLSX -->
+<link href="bootstrap.min.css" rel="stylesheet"/>
+<script src="xlsx.full.min.js"></script>
+
+<style>
+  :root{ --brand:#198754; --muted:#6c757d; }
+  body { background:#fafafa; font-family:system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding-bottom:60px; }
+  .topbar { display:flex; gap:12px; align-items:center; margin:18px 0; flex-wrap:wrap; }
+  .logo img{ height:56px; width:auto; border-radius:8px; }
+  .logo .name{ font-weight:700; font-size:20px; }
+  .upload-card{ background:#fff; padding:12px; border-radius:10px; box-shadow:0 6px 18px rgba(10,10,20,0.04); margin-bottom:14px; }
+  .tabs-row{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .tab-btn{ padding:8px 12px; border-radius:8px; border:1px solid #e6e6e6; background:#fff; cursor:pointer; }
+  .tab-btn.active{ background:var(--brand); color:#fff; box-shadow:0 6px 18px rgba(25,135,84,0.12); }
+  .product-area{ margin-top:12px; }
+  .card-panel{ background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 24px rgba(10,10,20,0.06); }
+  .images-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .image-box{ flex:1 1 300px; min-width:200px; border:1px solid #eee; border-radius:10px; padding:8px; display:flex; align-items:center; justify-content:center; background:#fff; }
+  .image-box img{ width:100%; height:auto; max-height:700px; object-fit:contain; border-radius:6px; display:block; }
+  .shade-item{ width:72px; text-align:center; margin-right:8px; display:inline-block; }
+  .shade-circle{ width:38px; height:38px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.12); cursor:pointer; margin:0 auto; }
+  .shade-label{ font-size:12px; margin-top:6px; color:#333; }
+  .shade-btn-fallback{ padding:6px 10px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+  .muted{ color:var(--muted); font-size:13px; }
+  .hidden{ display:none !important; }
+  table.price-table{ width:100%; border-collapse:
+  collapse; margin-top:12px; }
+  table.price-table th, table.price-table td{ border:1px solid #eee; padding:8px 10px; text-align:left; font-size:13px; }
+  table.price-table th{ background:#f8f8f8; font-weight:600; }
+  @media (max-width:900px){ .image-box img{ max-height:420px; } }
+  @media (max-width:520px){ .logo img{ height:44px; } .image-box img{ max-height:300px; } }
+</style>
+</head>
+<body class="container">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="d-flex align-items-center logo">
+      <img id="companyLogo" src="D:\Project Naiduhall\New folder\Nov-25\06\logo.avif.avif" alt="Logo">
+      <div style="margin-left:10px">
+        <div class="name">INTIMACY</div>
+        <div class="muted">Brand Catalogue</div>
+      </div>
+    </div>
+
+    <div style="flex:1"></div>
+
+    <div style="max-width:520px; flex:1">
+      <div class="input-group">
+        <input id="searchInput" class="form-control" placeholder="Search style (type & press Enter or click Search)">
+        <button id="searchBtn" class="btn btn-outline-secondary">Search</button>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <label class="btn btn-outline-primary mb-0">
+        Upload Excel <input id="fileInput" type="file" accept=".xlsx,.xls" hidden>
+      </label>
+      <button id="downloadSampleBtn" class="btn btn-success">Download Sample</button>
+      <button id="resetBtn" class="btn btn-outline-danger">Reset</button>
+    </div>
+  </div>
+
+  <!-- Upload info -->
+  <div class="upload-card">
+    <small class="muted">
+      Excel rows: one row per shade. Required columns: 
+      <code>Category, Style, StyleName, Fit, Sizes, Shade, ImageURLs, MRP, WSP, DSP</code>.<br>
+      <strong>Note:</strong> Each row corresponds to one shade — image URLs are comma-separated (front first).
+    </small>
+  </div>
+
+  <!-- Category Tabs -->
+  <div id="tabs" class="tabs-row mb-3"></div>
+
+  <!-- Style select -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Select Style</label>
+      <select id="styleSelect" class="form-select">
+        <option value="">-- Select style --</option>
+      </select>
+    </div>
+    <div class="col-md-6 text-end d-flex align-items-end justify-content-end">
+      <div class="muted">Select category first. Product details appear after selection.</div>
+    </div>
+  </div>
+
+  <!-- Product Display -->
+  <div id="productArea" class="product-area hidden">
+    <div class="card-panel">
+      <div class="row">
+        <div class="col-lg-6">
+          <div class="images-row" id="imagesRow">
+            <div class="image-box"><img id="imgFront" src="" alt="Front"></div>
+            <div class="image-box"><img id="imgBack" src="" alt="Back"></div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <h4 id="styleTitle"></h4>
+          <div id="styleName" class="muted mb-2"></div>
+
+          <div class="mb-2">
+            <div class="muted"><strong>Fit(s):</strong></div>
+            <div id="fitContainer" class="mt-1"></div>
+          </div>
+
+          <div class="mb-2">
+            <div class="muted"><strong>Sizes:</strong></div>
+            <div id="sizesContainer" class="mt-1"></div>
+          </div>
+
+          <div class="mb-2">
+            <div class="muted"><strong>Shades (click to change images):</strong></div>
+            <div id="shadesContainer" class="mt-2 d-flex flex-wrap"></div>
+          </div>
+
+          <div id="priceBlock" class="mt-3">
+            <div class="muted mb-1"><strong>Price Table</strong></div>
+            <div id="priceTableWrapper"></div>
+          </div>
+
+          <div class="mt-3">
+            <button id="backBtn" class="btn btn-outline-secondary">Back</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="noData" class="text-center muted mt-4">
+    No products to display. Upload Excel and select a category & style.
+  </div>
+
+<!-- ============ Script Section ============ -->
+<script>
+const CATEGORIES = ["Bra","Slip","Panties","Petticoat","Shorts"];
+let rawRows = [];
+let grouped = {};
+let activeCategory = CATEGORIES[0];
+let currentStyle = null;
+
+const $ = id => document.getElementById(id);
+function show(el){ el.classList.remove('hidden'); }
+function hide(el){ el.classList.add('hidden'); }
+function splitCSV(s){ if(!s && s!==0) return []; return String(s).split(',').map(x=>x.trim()).filter(x=>x.length); }
+function normalizeRow(r){
+  return {
+    Category:r.Category||r.category||"",
+    Style:r.Style||r.style||"",
+    StyleName:r.StyleName||r.stylename||"",
+    Fit:r.Fit||r.fit||"",
+    Sizes:r.Sizes||r.sizes||"",
+    Shade:r.Shade||r.shade||"",
+    ImageURLs:r.ImageURLs||r.imageurls||"",
+    MRP:r.MRP||r.mrp||"",
+    WSP:r.WSP||r.wsp||"",
+    DSP:r.DSP||r.dsp||""
+  };
+}
+
+/* Tabs */
+function renderTabs(){
+  const tabs=$('tabs');
+  tabs.innerHTML="";
+  CATEGORIES.forEach(cat=>{
+    const b=document.createElement('button');
+    b.className='tab-btn'+(cat===activeCategory?' active':'');
+    b.textContent=cat;
+    b.onclick=()=>selectCategory(cat);
+    tabs.appendChild(b);
+  });
+}
+renderTabs();
+
+// ---------- Auto Load Default Excel on Page Load ----------
+window.addEventListener('DOMContentLoaded', () => {
+  fetch('default_data.xlsx')  // must be in same folder as index.html
+    .then(response => response.arrayBuffer())
+    .then(buffer => {
+      const wb = XLSX.read(buffer, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      rawRows = XLSX.utils.sheet_to_json(sheet, { defval: "" }).map(normalizeRow);
+      grouped = {};
+      rawRows.forEach(r => {
+        if (!grouped[r.Style]) grouped[r.Style] = [];
+        grouped[r.Style].push(r);
+      });
+      populateStyleSelect();
+      updateTabCounts();
+      show($('noData'));
+    })
+    .catch(err => console.error("Failed to load default Excel:", err));
+});
+
+// ---------- Manual Upload (unchanged) ----------
+$('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const wb = XLSX.read(ev.target.result, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    rawRows = XLSX.utils.sheet_to_json(sheet, { defval: "" }).map(normalizeRow);
+    grouped = {};
+    rawRows.forEach(r => { if (!grouped[r.Style]) grouped[r.Style] = []; grouped[r.Style].push(r); });
+    populateStyleSelect();
+    updateTabCounts();
+    show($('noData'));
+  };
+  reader.readAsArrayBuffer(f);
+});
+
+
+function updateTabCounts(){
+  Array.from($('tabs').children).forEach(btn=>{
+    const cat=btn.textContent.split(' (')[0];
+    const count=rawRows.filter(r=>r.Category===cat).length;
+    btn.innerHTML=cat+(count?` <small style="opacity:.7">(${count})</small>`:'');
+  });
+}
+
+function selectCategory(cat){
+  activeCategory=cat;
+  renderTabs();
+  populateStyleSelect();
+  hide($('productArea'));
+  show($('noData'));
+}
+
+function populateStyleSelect(){
+  const sel=$('styleSelect');
+  sel.innerHTML='<option value="">-- Select style --</option>';
+  const styles=[...new Set(rawRows.filter(r=>r.Category===activeCategory).map(r=>r.Style))].sort();
+  styles.forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s; o.textContent=s;
+    sel.appendChild(o);
+  });
+}
+
+$('styleSelect').addEventListener('change',function(){
+  const style=this.value;
+  if(!style)return;
+  renderStyle(style);
+});
+
+function renderStyle(styleKey){
+  const rows = grouped[styleKey] || [];
+  if (!rows.length) return;
+
+  hide($('noData'));
+  show($('productArea'));
+  $('styleTitle').textContent = styleKey;
+  $('styleName').textContent = rows[0].StyleName || "";
+
+  $('fitContainer').innerHTML = [...new Set(rows.map(r => r.Fit))]
+    .map(f => `<span class="badge bg-light border text-dark me-1">${f}</span>`).join('');
+  $('sizesContainer').innerHTML = [...new Set(rows.map(r => r.Sizes))]
+    .map(s => `<span class="badge bg-light border text-dark me-1">${s}</span>`).join('');
+
+  // ---- Shades (unchanged) ----
+  const shadeC = $('shadesContainer');
+  shadeC.innerHTML = "";
+  const shades = [...new Set(rows.map(r => r.Shade))];
+  shades.forEach(sh => {
+    const imgs = splitCSV(rows.find(r => r.Shade === sh).ImageURLs);
+    const b = document.createElement('button');
+    b.className = 'shade-btn-fallback';
+    b.textContent = sh;
+    b.onclick = () => { applyShade(imgs[0], imgs[1] || imgs[0]); };
+    shadeC.appendChild(b);
+  });
+
+  // ---- ✅ Deduplicate price rows ----
+  const uniqueRows = [];
+  const seen = new Set();
+  rows.forEach(r => {
+    const key = `${r.Style}-${r.Sizes}-${r.Fit}-${r.MRP}-${r.WSP}-${r.DSP}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueRows.push(r);
+    }
+  });
+
+  // ---- Price Table (unchanged columns) ----
+  const priceT = uniqueRows.map(r =>
+    `<tr><td>${r.Style}</td><td>${r.Sizes}</td><td>${r.Fit}</td><td>${r.MRP}</td><td>${r.WSP}</td><td>${r.DSP}</td></tr>`
+  ).join('');
+  $('priceTableWrapper').innerHTML =
+    `<table class="price-table">
+      <thead>
+        <tr><th>Style</th><th>Size</th><th>Fit</th><th>MRP</th><th>WSP</th><th>DSP</th></tr>
+      </thead>
+      <tbody>${priceT}</tbody>
+    </table>`;
+
+  // ---- Default images (unchanged) ----
+  const imgSet = splitCSV(rows[0].ImageURLs);
+  applyShade(imgSet[0], imgSet[1] || imgSet[0]);
+}
+
+
+function applyShade(front,back){
+  $('imgFront').src=front||'';
+  $('imgBack').src=back||front||'';
+}
+
+$('downloadSampleBtn').addEventListener('click',()=>{
+  const data=[{Category:"Panties",Style:"IECDPL",StyleName:"Comfort Brief",Fit:"Regular",Sizes:"SM-XXL",Shade:"BTI",ImageURLs:"front.jpg,back.jpg",MRP:"415",WSP:"264.66",DSP:"238.19"}];
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Sample");
+  XLSX.writeFile(wb,"Catalog_Sample_Row_Shades.xlsx");
+});
+
+$('resetBtn').addEventListener('click',()=>{
+  rawRows=[]; grouped={};
+  $('styleSelect').innerHTML='<option value="">-- Select style --</option>';
+  hide($('productArea'));
+  show($('noData'));
+  updateTabCounts();
+});
+
+$('backBtn').addEventListener('click',()=>{
+  hide($('productArea'));
+  show($('noData'));
+});
+</script>
+</body>
+</html>
