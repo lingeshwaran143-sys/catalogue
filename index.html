@@ -140,6 +140,8 @@
     No products to display. Upload Excel and select a category & style.
   </div>
 
+  <footer>Built by LingEsh</footer>
+
 <!-- ============ Script Section ============ -->
 <script>
 const CATEGORIES = ["Bra","Slip","Panties","Petticoat","Shorts"];
@@ -334,7 +336,46 @@ $('backBtn').addEventListener('click',()=>{
   hide($('productArea'));
   show($('noData'));
 });
+
+  // ========== Search Function ==========
+
+// Trigger search when clicking button
+$('searchBtn').addEventListener('click', handleSearch);
+
+// Trigger search when pressing ENTER
+$('searchInput').addEventListener('keypress', function (e) {
+  if (e.key === "Enter") handleSearch();
+});
+
+function handleSearch() {
+  const query = $('searchInput').value.trim().toLowerCase();
+  if (!query) return;
+
+  // Find matching styles by Style or StyleName
+  const match = rawRows.find(r =>
+    r.Style.toLowerCase() === query ||
+    r.StyleName.toLowerCase().includes(query)
+  );
+
+  if (!match) {
+    alert("No matching style found!");
+    return;
+  }
+
+  // Switch category tab
+  activeCategory = match.Category;
+  renderTabs();
+  populateStyleSelect();
+
+  // Select style in dropdown
+  $('styleSelect').value = match.Style;
+
+  // Display product
+  renderStyle(match.Style);
+}
+
 </script>
 </body>
 </html>
+
 
